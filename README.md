@@ -33,3 +33,8 @@ Writes to `./storage/` by default:
 ## Notes
 - The runner is a simulated async job that emits logs and metrics.
 - Replace with your real pipeline/backtester over time.
+
+
+docker run --name searxng -d -p 8080:8080 -v "./searxng/config/:/etc/searxng/" -v "./searxng/data/:/var/cache/searxng/" docker.io/searxng/searxng:latest
+
+docker run --name qdrant -d -p 6333:6333 -p 6334:6334 -v "./qdrant/qdrant_storage:/qdrant/storage:z" docker.io/qdrant/qdrant:latest

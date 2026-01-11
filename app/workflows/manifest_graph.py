@@ -4,14 +4,16 @@ from datetime import datetime
 from typing import List
 from uuid import UUID
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
+from ..config import get_settings
 from ..db import engine
-from ..models import ManifestDraft, ExperimentManifest, HypothesisCard
-from ..settings import settings
+from ..models import ExperimentManifest, HypothesisCard, ManifestDraft
+
+settings = get_settings()
 
 
 class ManifestPayload(BaseModel):
@@ -33,7 +35,9 @@ def create_manifest_draft(hypothesis_id: UUID) -> ManifestDraft:
     output = structured.invoke(
         [
             SystemMessage(content=prompt),
-            HumanMessage(content=f"Hypothesis: {hypothesis.name}\n{hypothesis.falsifiable_prediction}"),
+            HumanMessage(
+                content=f"Hypothesis: {hypothesis.name}\n{hypothesis.falsifiable_prediction}"
+            ),
         ]
     )
     payload = output.model_dump()

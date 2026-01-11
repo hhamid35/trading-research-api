@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import os
-from ..settings import settings
+from psycopg import Connection
+
+from langgraph.checkpoint.postgres import PostgresSaver
+
+from ..config import get_settings
 from ..services import storage
 
 
-def get_checkpointer():
-    try:
-        from langgraph.checkpoint.sqlite import SqliteSaver
-    except Exception:
-        return None
+def get_checkpointer() -> PostgresSaver:
     storage.ensure_dirs()
-    path = os.path.join(settings.storage_dir, "checkpoints.sqlite")
-    return SqliteSaver(path)
+    settings = get_settings()
+    conn = Connection.connect(settings.db_url, autocommit=True)
+    return PostgresSaver(conn)

@@ -5,7 +5,9 @@ from typing import List, Optional
 
 import httpx
 
-from ..settings import settings
+from ..config import get_settings
+
+settings = get_settings()
 
 
 @dataclass
@@ -16,7 +18,13 @@ class SearchResult:
 
 
 class SearchProvider:
-    def search(self, query: str, limit: int = 10, recency_days: Optional[int] = None, domain_allowlist: Optional[list[str]] = None) -> List[SearchResult]:
+    def search(
+        self,
+        query: str,
+        limit: int = 10,
+        recency_days: Optional[int] = None,
+        domain_allowlist: Optional[list[str]] = None,
+    ) -> List[SearchResult]:
         raise NotImplementedError
 
 
@@ -24,7 +32,13 @@ class SearxngProvider(SearchProvider):
     def __init__(self) -> None:
         self.base_url = settings.searxng_url.rstrip("/")
 
-    def search(self, query: str, limit: int = 10, recency_days: Optional[int] = None, domain_allowlist: Optional[list[str]] = None) -> List[SearchResult]:
+    def search(
+        self,
+        query: str,
+        limit: int = 10,
+        recency_days: Optional[int] = None,
+        domain_allowlist: Optional[list[str]] = None,
+    ) -> List[SearchResult]:
         params = {
             "q": query,
             "format": "json",

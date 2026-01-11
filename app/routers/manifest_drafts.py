@@ -8,7 +8,11 @@ from sqlmodel import Session
 from ..db import get_session
 from ..models import ManifestDraft
 from ..schemas.research import ManifestDraftCreate, ManifestDraftOut
-from ..workflows.manifest_graph import create_manifest_draft, validate_manifest_draft, lock_manifest_draft
+from ..workflows.manifest_graph import (
+    create_manifest_draft,
+    lock_manifest_draft,
+    validate_manifest_draft,
+)
 
 router = APIRouter(prefix="/api/manifest_drafts", tags=["manifest_drafts"])
 

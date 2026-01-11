@@ -8,7 +8,7 @@ from sqlmodel import Session
 from ..db import get_session
 from ..models import HypothesisDraft
 from ..schemas.research import HypothesisDraftCreate, HypothesisDraftOut
-from ..workflows.hypothesis_graph import run_hypothesis_graph, approve_hypothesis
+from ..workflows.hypothesis_graph import approve_hypothesis, run_hypothesis_graph
 
 router = APIRouter(prefix="/api/hypothesis_drafts", tags=["hypothesis_drafts"])
 

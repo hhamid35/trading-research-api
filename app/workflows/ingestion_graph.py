@@ -1,21 +1,29 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, Generator, List
 from uuid import UUID
 
 from langgraph.graph import StateGraph
-from sqlmodel import Session, select
-from sqlalchemy import and_
+from qdrant_client.http import models as rest
+from regex import D
+from sqlalchemy import and_, tuple_
+from sqlmodel import Session, bindparam, select
+from psycopg import Connection
+from psycopg.rows import dict_row
+from langgraph.checkpoint.postgres import PostgresSaver
 
+from ..config import get_settings
 from ..db import engine
-from ..models import IngestionJob, Source, Document, DocumentChunk, ChunkEmbedding
-from ..indexing.loaders import load_file, load_text_blob
 from ..indexing.chunking import chunk_text
 from ..indexing.embeddings import get_embedding_provider
+from ..indexing.loaders import load_file, load_text_blob
 from ..indexing.vectorstore import ensure_collection, upsert_vectors
-from ..settings import settings
+from ..models import ChunkEmbedding, Document, DocumentChunk, IngestionJob, Source
+
+settings = get_settings()
 from ..services import storage
 from .checkpoint import get_checkpointer
 from .state import IngestionState
@@ -120,7 +128,10 @@ def embed_chunks(state: IngestionState) -> IngestionState:
     embeddings = []
     payloads = []
     with Session(engine) as session:
-        chunks = session.exec(select(DocumentChunk).where(DocumentChunk.id.in_(chunk_ids))).all()
+        chunks = session.exec(
+            select(DocumentChunk).where(DocumentChunk.id.in_(bindparam("q"))),
+            bind_arguments=dict(q=chunk_ids),
+        ).all()
         texts = [c.text for c in chunks]
         if not texts:
             return {**state, "embedding_model": model_name}
@@ -178,7 +189,6 @@ def embed_chunks(state: IngestionState) -> IngestionState:
             }
             for item in payloads
         ]
-        from qdrant_client.http import models as rest
 
         upsert_vectors([rest.PointStruct(**p) for p in points])
 
@@ -191,6 +201,17 @@ def mark_complete(state: IngestionState) -> IngestionState:
     return state
 
 
+def _checkpointer() -> PostgresSaver:
+    settings = get_settings()
+    conn = Connection.connect(
+        settings.db_url,
+        autocommit=True,
+        prepare_threshold=0,
+        row_factory=dict_row
+    )
+    return PostgresSaver(conn)
+
+
 def build_graph():
     graph = StateGraph(IngestionState)
     graph.add_node("load_source", load_source)
@@ -201,7 +222,7 @@ def build_graph():
     graph.add_edge("load_source", "chunk_documents")
     graph.add_edge("chunk_documents", "embed_chunks")
     graph.add_edge("embed_chunks", "mark_complete")
-    return graph.compile(checkpointer=get_checkpointer())
+    return graph.compile(checkpointer=_checkpointer())
 
 
 async def run_ingestion_job(job_id: UUID, publish=None) -> None:
@@ -210,11 +231,31 @@ async def run_ingestion_job(job_id: UUID, publish=None) -> None:
         publish({"type": "status", "status": "RUNNING", "job_id": str(job_id)})
     try:
         graph = build_graph()
-        graph.invoke({"job_id": str(job_id), "source_id": "", "document_ids": [], "chunk_ids": [], "embedding_model": "", "stats": {}, "error": None}, config={"configurable": {"thread_id": f"ingest:{job_id}"}})
+        graph.invoke(
+            {
+                "job_id": str(job_id),
+                "source_id": "",
+                "document_ids": [],
+                "chunk_ids": [],
+                "embedding_model": "",
+                "stats": {},
+                "error": None,
+            },
+            config={"configurable": {"thread_id": f"ingest:{job_id}"}},
+        )
     except Exception as exc:
-        _update_job(job_id, status="FAILED", last_error=str(exc), ended_at=datetime.utcnow())
+        _update_job(
+            job_id, status="FAILED", last_error=str(exc), ended_at=datetime.utcnow()
+        )
         if publish:
-            publish({"type": "status", "status": "FAILED", "job_id": str(job_id), "error": str(exc)})
+            publish(
+                {
+                    "type": "status",
+                    "status": "FAILED",
+                    "job_id": str(job_id),
+                    "error": str(exc),
+                }
+            )
         return
     _update_job(job_id, status="SUCCEEDED", ended_at=datetime.utcnow())
     if publish:

@@ -11,11 +11,11 @@ from langchain_core.tools import tool
 from sqlmodel import Session
 
 from ..db import engine
-from ..models import Source, IngestionJob
-from ..services import storage
-from ..web.search_provider import get_search_provider
-from ..web.fetcher import fetch_url as fetcher_fetch_url
 from ..indexing.retrieval import retrieve as retrieve_chunks
+from ..models import IngestionJob, Source
+from ..services import storage
+from ..web.fetcher import fetch_url as fetcher_fetch_url
+from ..web.search_provider import get_search_provider
 from ..workflows.ingestion_graph import run_ingestion_job
 
 
@@ -62,10 +62,20 @@ def _write_source_text(title: str, text: str) -> Source:
 
 def build_tools(context: ToolContext):
     @tool
-    def web_search(query: str, recency_days: Optional[int] = None, domain_allowlist: Optional[list[str]] = None, limit: int = 10) -> List[dict]:
+    def web_search(
+        query: str,
+        recency_days: Optional[int] = None,
+        domain_allowlist: Optional[list[str]] = None,
+        limit: int = 10,
+    ) -> List[dict]:
         """Search the web for relevant documents."""
         provider = get_search_provider()
-        results = provider.search(query, limit=limit, recency_days=recency_days, domain_allowlist=domain_allowlist)
+        results = provider.search(
+            query,
+            limit=limit,
+            recency_days=recency_days,
+            domain_allowlist=domain_allowlist,
+        )
         return [r.__dict__ for r in results]
 
     @tool
@@ -126,7 +136,12 @@ def build_tools(context: ToolContext):
     def retrieve(query: str, source_id: Optional[str] = None, k: int = 8) -> List[dict]:
         """Retrieve chunks from the vector store."""
         with Session(engine) as session:
-            hits = retrieve_chunks(session, query=query, k=k, source_id=UUID(source_id) if source_id else None)
+            hits = retrieve_chunks(
+                session,
+                query=query,
+                k=k,
+                source_id=UUID(source_id) if source_id else None,
+            )
         return hits
 
     return [web_search, fetch_url, create_note, upload_source, index_source, retrieve]

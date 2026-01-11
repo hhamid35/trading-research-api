@@ -23,7 +23,9 @@ def _normalize_text(text: str) -> str:
 
 def load_text_blob(text: str, title: str = "", uri: str = "") -> List[LoadedDocument]:
     normalized = _normalize_text(text)
-    return [LoadedDocument(kind="text", title=title, uri=uri, text=normalized, metadata={})]
+    return [
+        LoadedDocument(kind="text", title=title, uri=uri, text=normalized, metadata={})
+    ]
 
 
 def load_html(html: str, uri: str = "") -> List[LoadedDocument]:
@@ -32,7 +34,15 @@ def load_html(html: str, uri: str = "") -> List[LoadedDocument]:
     soup = BeautifulSoup(summary, "html.parser")
     text = soup.get_text("\n", strip=True)
     title = doc.short_title() or "Untitled"
-    return [LoadedDocument(kind="html", title=title, uri=uri, text=_normalize_text(text), metadata={"title": title})]
+    return [
+        LoadedDocument(
+            kind="html",
+            title=title,
+            uri=uri,
+            text=_normalize_text(text),
+            metadata={"title": title},
+        )
+    ]
 
 
 def load_file(path: str, uri: str = "") -> Iterable[LoadedDocument]:

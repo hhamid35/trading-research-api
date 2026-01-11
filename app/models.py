@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import relationship
-from sqlmodel import SQLModel, Field, Relationship, Column, JSON
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 
 def utcnow() -> datetime:
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 
 # -------------------------
 # Core registry tables
 # -------------------------
+
 
 class Source(SQLModel, table=True):
     """Research input: uploaded file, URL, pasted text, note, or derived artifact."""
@@ -59,7 +60,9 @@ class HypothesisCard(SQLModel, table=True):
     decision_timing: str = "on_trade_event"
     horizons_ms: list[int] = Field(default_factory=list, sa_column=Column(JSON))
     primary_metrics: list[str] = Field(default_factory=list, sa_column=Column(JSON))
-    acceptance_criteria: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    acceptance_criteria: list[dict] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
 
     tradability_constraints: str = ""
     failure_modes: list[str] = Field(default_factory=list, sa_column=Column(JSON))
@@ -73,7 +76,9 @@ class HypothesisCard(SQLModel, table=True):
     approved_by: Optional[str] = None
 
     sources: list["HypothesisSourceLink"] = Relationship(
-        sa_relationship=relationship("HypothesisSourceLink", back_populates="hypothesis")
+        sa_relationship=relationship(
+            "HypothesisSourceLink", back_populates="hypothesis"
+        )
     )
     manifests: list["ExperimentManifest"] = Relationship(
         sa_relationship=relationship("ExperimentManifest", back_populates="hypothesis")
@@ -144,7 +149,9 @@ class Run(SQLModel, table=True):
     hypothesis_id: UUID = Field(foreign_key="hypothesiscard.id", index=True)
     manifest_id: UUID = Field(foreign_key="experimentmanifest.id", index=True)
 
-    status: str = Field(default="QUEUED", index=True)  # QUEUED|RUNNING|FAILED|SUCCEEDED|CANCELED
+    status: str = Field(
+        default="QUEUED", index=True
+    )  # QUEUED|RUNNING|FAILED|SUCCEEDED|CANCELED
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
 
@@ -181,7 +188,9 @@ class RunArtifact(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     run_id: UUID = Field(foreign_key="run.id", index=True)
-    kind: str = Field(default="METRICS", index=True)  # METRICS|PLOT|REPORT|MODEL|FILE|TABLE
+    kind: str = Field(
+        default="METRICS", index=True
+    )  # METRICS|PLOT|REPORT|MODEL|FILE|TABLE
     name: str = Field(default="", index=True)
 
     media_type: str = "application/json"
@@ -223,7 +232,9 @@ class StrategyPackage(SQLModel, table=True):
     hypothesis_id: UUID = Field(foreign_key="hypothesiscard.id", index=True)
 
     version: str = "0.1.0"
-    readiness: str = Field(default="DRAFT", index=True)  # DRAFT|APPROVED_FOR_SHADOW|APPROVED_FOR_PAPER|APPROVED_FOR_LIVE|RETIRED
+    readiness: str = Field(
+        default="DRAFT", index=True
+    )  # DRAFT|APPROVED_FOR_SHADOW|APPROVED_FOR_PAPER|APPROVED_FOR_LIVE|RETIRED
 
     code_version: str = "git:unknown"
     parameters: dict = Field(default_factory=dict, sa_column=Column(JSON))
@@ -248,7 +259,9 @@ class LiveInstance(SQLModel, table=True):
     strategy_id: UUID = Field(foreign_key="strategypackage.id", index=True)
 
     mode: str = Field(default="SHADOW", index=True)  # SHADOW|PAPER|LIVE
-    status: str = Field(default="STARTING", index=True)  # STARTING|RUNNING|STOPPED|ERROR
+    status: str = Field(
+        default="STARTING", index=True
+    )  # STARTING|RUNNING|STOPPED|ERROR
 
     created_at: datetime = Field(default_factory=utcnow)
     stopped_at: Optional[datetime] = None
@@ -338,7 +351,9 @@ class ResearchChatMessage(SQLModel, table=True):
 class HypothesisDraft(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     session_id: UUID = Field(foreign_key="researchchatsession.id", index=True)
-    status: str = Field(default="PROPOSED", index=True)  # PROPOSED|REVISED|APPROVED|REJECTED
+    status: str = Field(
+        default="PROPOSED", index=True
+    )  # PROPOSED|REVISED|APPROVED|REJECTED
     payload_json: dict = Field(default_factory=dict, sa_column=Column(JSON))
     citations_json: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
     rationale_json: dict = Field(default_factory=dict, sa_column=Column(JSON))
@@ -351,7 +366,9 @@ class HypothesisDraft(SQLModel, table=True):
 class ManifestDraft(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     hypothesis_id: UUID = Field(foreign_key="hypothesiscard.id", index=True)
-    status: str = Field(default="PROPOSED", index=True)  # PROPOSED|FAILED_VALIDATION|READY_TO_LOCK|LOCKED
+    status: str = Field(
+        default="PROPOSED", index=True
+    )  # PROPOSED|FAILED_VALIDATION|READY_TO_LOCK|LOCKED
     payload_json: dict = Field(default_factory=dict, sa_column=Column(JSON))
     validation_report_json: dict = Field(default_factory=dict, sa_column=Column(JSON))
     thread_id: str = ""

@@ -5,7 +5,6 @@ import uuid
 from dataclasses import dataclass
 from typing import Iterable, List
 
-
 CHUNK_NAMESPACE = uuid.UUID("12345678-1234-5678-1234-567812345678")
 
 
@@ -34,7 +33,9 @@ def _normalize(text: str) -> str:
     return " ".join(text.replace("\t", " ").split())
 
 
-def chunk_text(text: str, document_id: uuid.UUID, chunk_size: int = 1000, overlap: int = 120) -> List[Chunk]:
+def chunk_text(
+    text: str, document_id: uuid.UUID, chunk_size: int = 1000, overlap: int = 120
+) -> List[Chunk]:
     normalized = _normalize(text)
     chunks: List[Chunk] = []
     start = 0
@@ -65,8 +66,14 @@ def chunk_text(text: str, document_id: uuid.UUID, chunk_size: int = 1000, overla
     return chunks
 
 
-def chunk_documents(docs: Iterable[tuple[uuid.UUID, str]], chunk_size: int = 1000, overlap: int = 120) -> List[Chunk]:
+def chunk_documents(
+    docs: Iterable[tuple[uuid.UUID, str]], chunk_size: int = 1000, overlap: int = 120
+) -> List[Chunk]:
     all_chunks: List[Chunk] = []
     for document_id, text in docs:
-        all_chunks.extend(chunk_text(text, document_id=document_id, chunk_size=chunk_size, overlap=overlap))
+        all_chunks.extend(
+            chunk_text(
+                text, document_id=document_id, chunk_size=chunk_size, overlap=overlap
+            )
+        )
     return all_chunks

@@ -5,7 +5,9 @@ from typing import Iterable, List
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as rest
 
-from ..settings import settings
+from ..config import get_settings
+
+settings = get_settings()
 
 
 def get_client() -> QdrantClient:
@@ -28,7 +30,9 @@ def upsert_vectors(items: Iterable[rest.PointStruct]) -> None:
     client.upsert(collection_name=settings.qdrant_collection, points=list(items))
 
 
-def search_vectors(query: List[float], limit: int = 8, filters: rest.Filter | None = None) -> List[rest.ScoredPoint]:
+def search_vectors(
+    query: List[float], limit: int = 8, filters: rest.Filter | None = None
+) -> List[rest.ScoredPoint]:
     client = get_client()
     return client.search(
         collection_name=settings.qdrant_collection,

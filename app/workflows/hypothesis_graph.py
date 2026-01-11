@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List
+from typing import List, cast
 from uuid import UUID
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select
+from sqlmodel import Session, select, desc
 
+from ..config import get_settings
 from ..db import engine
-from ..models import ResearchChatMessage, HypothesisDraft, HypothesisCard
 from ..indexing.retrieval import retrieve
-from ..settings import settings
+from ..models import HypothesisCard, HypothesisDraft, ResearchChatMessage
+
+settings = get_settings()
 from .state import HypothesisState
 
 
@@ -34,7 +36,7 @@ def _chat_context(session_id: UUID, limit: int = 12) -> str:
         messages = session.exec(
             select(ResearchChatMessage)
             .where(ResearchChatMessage.session_id == session_id)
-            .order_by(ResearchChatMessage.created_at.desc())
+            .order_by(desc(ResearchChatMessage.created_at))
             .limit(limit)
         ).all()
     lines = [f"{m.role}: {m.content}" for m in reversed(messages)]
@@ -66,13 +68,15 @@ def run_hypothesis_graph(session_id: UUID) -> HypothesisDraft:
         "Draft a non-generic, falsifiable trading hypothesis. "
         "Use the context and citations."
     )
-    output = structured.invoke([
-        SystemMessage(content=prompt),
-        HumanMessage(content=context),
-        HumanMessage(content=f"Citations: {citations}"),
-    ])
+    output = structured.invoke(
+        [
+            SystemMessage(content=prompt),
+            HumanMessage(content=context),
+            HumanMessage(content=f"Citations: {citations}"),
+        ]
+    )
 
-    payload = output.model_dump()
+    payload = cast(dict, output)
     draft = HypothesisDraft(
         session_id=session_id,
         status="PROPOSED",
@@ -90,7 +94,9 @@ def run_hypothesis_graph(session_id: UUID) -> HypothesisDraft:
     return draft
 
 
-def approve_hypothesis(draft_id: UUID, approved_by: str = "local-user") -> HypothesisCard:
+def approve_hypothesis(
+    draft_id: UUID, approved_by: str = "local-user"
+) -> HypothesisCard:
     with Session(engine) as session:
         draft = session.get(HypothesisDraft, draft_id)
         if not draft:

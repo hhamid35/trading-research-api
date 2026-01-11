@@ -5,14 +5,16 @@ from datetime import datetime
 from typing import Callable, Dict, List
 from uuid import UUID
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
+from langchain_openai import ChatOpenAI
 from sqlmodel import Session, select
 
+from ..config import get_settings
 from ..db import engine
 from ..models import ResearchChatMessage, ResearchChatSession
-from ..settings import settings
+
+settings = get_settings()
 from .prompts import SYSTEM_PROMPT
 from .tools import ToolContext, build_tools
 
@@ -35,13 +37,21 @@ def _to_lc_messages(history: List[ResearchChatMessage]) -> List:
         if role == "assistant":
             messages.append(AIMessage(content=msg.content))
         elif role == "tool":
-            messages.append(ToolMessage(content=msg.content, tool_call_id=msg.tool_name or ""))
+            messages.append(
+                ToolMessage(content=msg.content, tool_call_id=msg.tool_name or "")
+            )
         else:
             messages.append(HumanMessage(content=msg.content))
     return messages
 
 
-def _save_message(session_id: UUID, role: str, content: str, tool_name: str | None = None, tool_payload: dict | None = None) -> ResearchChatMessage:
+def _save_message(
+    session_id: UUID,
+    role: str,
+    content: str,
+    tool_name: str | None = None,
+    tool_payload: dict | None = None,
+) -> ResearchChatMessage:
     with Session(engine) as session:
         msg = ResearchChatMessage(
             session_id=session_id,
@@ -56,7 +66,9 @@ def _save_message(session_id: UUID, role: str, content: str, tool_name: str | No
         return msg
 
 
-async def run_chat_turn(session_id: UUID, user_message_id: UUID, publish: Callable[[dict], None]) -> None:
+async def run_chat_turn(
+    session_id: UUID, user_message_id: UUID, publish: Callable[[dict], None]
+) -> None:
     history = _load_history(session_id)
     tools = build_tools(ToolContext(session_id=session_id))
 
@@ -87,7 +99,9 @@ async def run_chat_turn(session_id: UUID, user_message_id: UUID, publish: Callab
             )
             publish({"type": "tool_end", "tool": call["name"], "result": result})
             lc_messages.append(
-                ToolMessage(content=str(result), tool_call_id=call.get("id") or call["name"])
+                ToolMessage(
+                    content=str(result), tool_call_id=call.get("id") or call["name"]
+                )
             )
     else:
         publish({"type": "error", "message": "Tool loop exceeded"})
@@ -109,7 +123,9 @@ async def run_chat_turn(session_id: UUID, user_message_id: UUID, publish: Callab
         if not delta:
             continue
         content_parts.append(delta)
-        publish({"type": "assistant_delta", "message_id": str(assistant.id), "delta": delta})
+        publish(
+            {"type": "assistant_delta", "message_id": str(assistant.id), "delta": delta}
+        )
 
     final = "".join(content_parts).strip()
     with Session(engine) as session:

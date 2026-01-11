@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import List
 
-from ..settings import settings
+from ..config import get_settings
+
+settings = get_settings()
 
 
 class EmbeddingProvider:
@@ -18,7 +20,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         from langchain_openai import OpenAIEmbeddings
 
         self._model = "text-embedding-3-small"
-        self._client = OpenAIEmbeddings(api_key=settings.openai_api_key, model=self._model)
+        self._client = OpenAIEmbeddings(
+            api_key=settings.openai_api_key, model=self._model
+        )
 
     def model_name(self) -> str:
         return self._model
