@@ -363,6 +363,29 @@ class HypothesisDraft(SQLModel, table=True):
     updated_at: Optional[datetime] = None
 
 
+# -------------------------
+# Auth tables
+# -------------------------
+
+
+class User(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    email: str = Field(index=True, unique=True)
+    hashed_password: str
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class ApiKey(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="user.id", index=True)
+    key_hash: str = Field(index=True)
+    key_prefix: str = ""
+    label: str = "default"
+    created_at: datetime = Field(default_factory=utcnow)
+    last_used_at: Optional[datetime] = None
+
+
 class ManifestDraft(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     hypothesis_id: UUID = Field(foreign_key="hypothesiscard.id", index=True)

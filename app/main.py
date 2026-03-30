@@ -13,12 +13,22 @@ from fastapi.responses import JSONResponse
 from .config import get_settings
 from .db import create_db_and_tables
 from .routers import (
+    auth,
+    chats,
+    dashboard,
     health,
+    hypotheses,
     hypothesis_drafts,
     ingestion,
+    live,
     manifest_drafts,
+    manifests,
+    providers,
     research_chat,
+    runs,
     search,
+    sources,
+    strategies,
 )
 from .services.storage import ensure_dirs
 from .utils.logging import get_logger, log_request, setup_logging
@@ -178,6 +188,16 @@ def create_app() -> FastAPI:
     application.include_router(search.router)
     application.include_router(hypothesis_drafts.router)
     application.include_router(manifest_drafts.router)
+    application.include_router(sources.router)
+    application.include_router(hypotheses.router)
+    application.include_router(manifests.router)
+    application.include_router(runs.router)
+    application.include_router(strategies.router)
+    application.include_router(live.router)
+    application.include_router(providers.router)
+    application.include_router(dashboard.router)
+    application.include_router(chats.router)
+    application.include_router(auth.router)
 
     # Root endpoint
     @application.get("/", tags=["root"])
@@ -191,11 +211,20 @@ def create_app() -> FastAPI:
             "timestamp": time.time(),
             "endpoints": {
                 "health": "/health/",
+                "sources": "/api/sources/",
+                "hypotheses": "/api/hypotheses/",
+                "manifests": "/api/manifests/",
+                "runs": "/api/runs/",
+                "strategies": "/api/strategies/",
+                "live": "/api/live/",
+                "providers": "/api/providers/",
+                "chats": "/api/chats/",
+                "dashboard": "/api/dashboard/",
                 "research_chat": "/api/research_chat/",
                 "ingestion": "/api/ingestion/",
                 "search": "/api/search/",
-                "hypotheses": "/api/hypothesis_drafts/",
-                "manifests": "/api/manifest_drafts/",
+                "hypothesis_drafts": "/api/hypothesis_drafts/",
+                "manifest_drafts": "/api/manifest_drafts/",
                 "docs": "/docs",
                 "redoc": "/redoc",
             },
