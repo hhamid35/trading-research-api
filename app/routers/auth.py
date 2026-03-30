@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlmodel import Session, select
 
 from ..auth import (
@@ -106,14 +106,15 @@ def list_api_keys(
     )
 
 
-@router.delete("/api-keys/{key_id}", status_code=204)
+@router.delete("/api-keys/{key_id}", status_code=204, response_class=Response)
 def delete_api_key(
     key_id: UUID,
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
-) -> None:
+) -> Response:
     api_key = session.get(ApiKey, key_id)
     if not api_key or api_key.user_id != user.id:
         raise HTTPException(status_code=404, detail="API key not found")
     session.delete(api_key)
     session.commit()
+    return Response(status_code=204)
