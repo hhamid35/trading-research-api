@@ -76,6 +76,12 @@ class Settings(BaseSettings):
         default="all-MiniLM-L6-v2", description="Sentence transformers model name"
     )
 
+    # Auth Configuration
+    jwt_secret: str = Field(
+        default="change-me-in-production",
+        description="Secret key for JWT token signing",
+    )
+
     # Health Check Configuration
     health_check_timeout: float = Field(
         default=5.0, description="Health check timeout in seconds"
